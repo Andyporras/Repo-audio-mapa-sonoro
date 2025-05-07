@@ -2,31 +2,38 @@
 
 Este repositorio utiliza **GitHub Actions** para descomprimir automáticamente todos los archivos `.zip` que se suban o modifiquen en cualquier carpeta del repositorio.
 
+## 📋 Índice
+- [¿Qué hace esta acción?](#-qué-hace-esta-acción)
+- [Cómo habilitar GitHub Actions](#️-cómo-habilitar-github-actions)
+- [Agregar este flujo de trabajo](#-agregar-este-flujo-de-trabajo)
+- [Cómo probarlo](#-cómo-probarlo)
+- [Configuración personalizada](#-configuración-personalizada)
+- [Solución de problemas](#-solución-de-problemas)
+- [Contribuciones](#-contribuciones)
+
 ## ✅ ¿Qué hace esta acción?
 
 Cada vez que haces un push con uno o más archivos `.zip`, el flujo de trabajo:
 
-1. Detecta cuáles `.zip` son nuevos o modificados.
-2. Los descomprime en una carpeta con el mismo nombre (sin la extensión `.zip`).
-3. Opcionalmente (puedes habilitarlo), elimina el `.zip` original.
-4. Hace commit y push de los archivos descomprimidos automáticamente.
-
----
+1. Detecta automáticamente cuáles archivos `.zip` son nuevos o modificados
+2. Los descomprime en una carpeta con el mismo nombre (sin la extensión `.zip`)
+3. Opcionalmente elimina el archivo `.zip` original (desactivado por defecto)
+4. Hace commit y push de los archivos descomprimidos automáticamente
 
 ## ⚙️ Cómo habilitar GitHub Actions
 
-1. Ve a tu repositorio en GitHub.
-2. Haz clic en la pestaña **"Actions"**.
-3. Si no es la primera, haz clic en el botón **"New workflow"** y luego hace el paso 4
-4. Si es la primera vez, haz clic en el botón **"Set up a workflow yourself"** para activar Actions.
-5. ¡Listo! Ya puedes usar agregar el flujo de trabajo
-
----
+1. Ve a tu repositorio en GitHub
+2. Haz clic en la pestaña **"Actions"**
+3. Si es tu primera acción:
+   - Haz clic en el botón **"Set up a workflow yourself"**
+4. Si ya tienes otras acciones:
+   - Haz clic en el botón **"New workflow"**
+   - Selecciona **"set up a workflow yourself"**
 
 ## 📂 Agregar este flujo de trabajo
 
-1. Una vez hecho lo pasado pegue este codigo y cambien el nombre del archivo a  `auto-unzip.yml`.
-2. Ahora solo debe tocar el boton que dice **"Commit changes"**
+1. Crea un nuevo archivo en la ruta `.github/workflows/auto-unzip.yml`
+2. Copia y pega el siguiente código:
 
 ```yaml
 name: Descomprimir Todos los ZIPs Subidos
@@ -53,18 +60,14 @@ jobs:
         run: |
           echo "Buscando archivos .zip nuevos o modificados..."
           # Identificar los archivos .zip que fueron añadidos o modificados en este push
-          # github.event.before es el SHA del commit antes del push (o ceros si es una nueva rama)
-          # github.sha es el SHA del último commit en el push
           
           if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
             # Es una nueva rama o el primer push. Considera todos los .zip en el commit actual.
             echo "Nueva rama o primer push. Obteniendo todos los .zip del commit actual (${{ github.sha }})."
-            # ls-tree lista los archivos en el commit. grep filtra por .zip.
             zip_files_to_process=$(git ls-tree --full-tree -r --name-only ${{ github.sha }} | grep '\.zip$' || true)
           else
             # Es un push a una rama existente. Compara el estado antes y después del push.
             echo "Push a rama existente. Comparando commits ${{ github.event.before }} y ${{ github.sha }}."
-            # diff --name-only lista los nombres de los archivos cambiados. grep filtra por .zip.
             zip_files_to_process=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.zip$' || true)
           fi
 
@@ -90,8 +93,6 @@ jobs:
               base_name_no_ext=$(basename "$zip_file" .zip)
               
               # Crea un directorio para la extracción con el nombre del ZIP (sin .zip)
-              # en la misma ubicación donde estaba el ZIP.
-              # Ejemplo: 'datos/archivo.zip' se extraerá en 'datos/archivo/'
               extraction_dir="$parent_dir/$base_name_no_ext"
               
               # Asegura que el directorio de extracción no sea solo "." si el zip está en la raíz
@@ -152,16 +153,36 @@ jobs:
             echo "Haciendo push de los cambios..."
             git push
           fi
-
-
-
 ```
 
-## 🧪 Cómo probarlo
-1. Sube un archivo .zip en cualquier carpeta del repositorio y haz push.
-2. Ve a la pestaña Actions y verás que se ejecuta el workflow.
-3. Revisa que se haya creado una carpeta con el contenido del ZIP, y que se haya hecho commit automáticamente.
+3. Haz clic en **"Commit changes"** para guardar el archivo
 
-## 📝 Notas
-* Este flujo no elimina los archivos .zip después de descomprimirlos. Si quieres eso, descomenta la línea rm "$zip_file" en el script.
-* Ideal para proyectos donde se espera subir datos comprimidos y se necesita que estén descomprimidos automáticamente.
+## 🧪 Cómo probarlo
+
+1. Sube un archivo `.zip` a cualquier carpeta del repositorio
+2. Espera a que se ejecute el workflow (puedes seguir su progreso en la pestaña "Actions")
+3. Verifica que se haya creado automáticamente:
+   - Una nueva carpeta con el mismo nombre que el archivo ZIP (sin la extensión)
+   - Un commit automático con los archivos descomprimidos
+
+## ⚡ Configuración personalizada
+
+Para personalizar el comportamiento de la acción:
+
+- **Eliminar archivos ZIP originales**: Descomenta la línea `# rm "$zip_file"` en el script para eliminar los ZIP después de descomprimirlos
+- **Cambiar el mensaje de commit**: Modifica la variable `commit_message` para personalizar el texto del commit automático
+- **Aplicar a ciertos directorios**: Cambia el trigger `paths` si solo quieres activar la acción en ciertas carpetas
+
+## 🔍 Solución de problemas
+
+- **La acción no se ejecuta**: Verifica que tengas habilitadas las GitHub Actions en tu repositorio
+- **Errores de permisos**: Asegúrate de que la línea `permissions: contents: write` esté presente
+- **No se hace push**: Revisa los logs de la acción en la pestaña "Actions" para ver si hubo algún error
+
+## 👥 Contribuciones
+
+¡Las contribuciones son bienvenidas! Si encuentras algún problema o tienes alguna mejora, no dudes en:
+
+1. Abrir un issue describiendo el problema o mejora
+2. Enviar un pull request con los cambios propuestos
+
